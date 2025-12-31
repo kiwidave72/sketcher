@@ -18,6 +18,7 @@
 
 @code {
   [Parameter] public string ContainerId { get; set; } = "three-host";
+
   private IJSObjectReference? _module;
   private bool _connected;
   private long _rev = 0;
@@ -53,17 +54,17 @@
     StateHasChanged();
   }
 
-  private async Task ToggleConnect()
-  {
-    if (_connected)
+    private async Task ToggleConnect()
     {
-      await Sync.DisposeAsync();
-      _connected = false;
-      StateHasChanged();
-      return;
+        if (_connected)
+        {
+            await Sync.DisposeAsync();
+            _connected = false;
+            StateHasChanged();
+            return;
+        }
+        await TryConnect();
     }
-    await TryConnect();
-  }
 
   private object BuildRenderPayload()
   {

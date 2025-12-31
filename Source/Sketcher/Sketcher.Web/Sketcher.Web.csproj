@@ -5,14 +5,26 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" PrivateAssets="all" />
-  </ItemGroup>
-  <ItemGroup>
+ <ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.21" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.21" PrivateAssets="all" />
+</ItemGroup>
+<ItemGroup>
     <ProjectReference Include="..\Sketcher.Application\Sketcher.Application.csproj" />
     <ProjectReference Include="..\Sketcher.Solver.Relaxation\Sketcher.Solver.Relaxation.csproj" />
     <ProjectReference Include="..\Sketcher.Infrastructure.Browser\Sketcher.Infrastructure.Browser.csproj" />
     <ProjectReference Include="..\Sketcher.Infrastructure.SignalR\Sketcher.Infrastructure.SignalR.csproj" />
   </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sketcher.Infrastructure.Browser\Sketcher.Infrastructure.Browser.csproj" />
+    <ProjectReference Include="..\Sketcher.Application\Sketcher.Application.csproj" />
+    <ProjectReference Include="..\Sketcher.Solver.Relaxation\Sketcher.Solver.Relaxation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\js\" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,62 @@
+@inject IJSRuntime JS
+@inject Sketcher.Application.SketchService Sketch
+
+<div id="@ContainerId" style="width: 900px; height: 600px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;"></div>
+
+<div style="margin-top:8px; display:flex; gap:8px;">
+  <button @onclick="AddSample">Add sample + solve</button>
+  <button @onclick="Solve">Solve</button>
+  <button @onclick="Refresh">Refresh view</button>
+</div>
+
+@code {
+  [Parameter] public string ContainerId { get; set; } = "three-host";
+
+  private IJSObjectReference? _module;
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender) return;
+
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/sketchThree.js");
+    await _module.InvokeVoidAsync("init", ContainerId);
+    await Refresh();
+  }
+
+  private object BuildRenderPayload()
+  {
+    // Use your existing query helpers
+    var points = Sketch.Points();
+    var lines = Sketch.Lines();
+    var constraints = Sketch.Constraints();
+
+    return new
+    {
+      points = points.Select(p => new { id = p.Id, x = p.X, y = p.Y }),
+      lines = lines.Select(l => new { id = l.Id, startPointId = l.StartPointId, endPointId = l.EndPointId }),
+      constraints = constraints.Select(c => new { id = c.Id, type = c.Type, label = c.Label, entityIds = c.EntityIds })
+    };
+  }
+
+  private async Task Refresh()
+  {
+    if (_module is null) return;
+    await _module.InvokeVoidAsync("setSketch", BuildRenderPayload());
+  }
+
+  private async Task Solve()
+  {
+    Sketch.Solve();
+    await Refresh();
+  }
+
+  private async Task AddSample()
+  {
+    var a = Sketch.AddPoint(0, 0);
+    var b = Sketch.AddPoint(10, 5);
+    var l = Sketch.AddLine(a, b);
+    Sketch.AddHorizontal(l);
+    Sketch.Solve();
+    await Refresh();
+  }
+}

@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sketcher.Infrastructure.Bro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sketcher.Cli", "Sketcher.Cli\Sketcher.Cli.csproj", "{9B17EF4C-9C3C-4197-A716-C677DC83FEEF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sketcher.Web", "Sketcher.Web\Sketcher.Web.csproj", "{DA16CBE0-17DE-457A-AE3D-B7909A3D6349}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{9B17EF4C-9C3C-4197-A716-C677DC83FEEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B17EF4C-9C3C-4197-A716-C677DC83FEEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B17EF4C-9C3C-4197-A716-C677DC83FEEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA16CBE0-17DE-457A-AE3D-B7909A3D6349}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA16CBE0-17DE-457A-AE3D-B7909A3D6349}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA16CBE0-17DE-457A-AE3D-B7909A3D6349}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA16CBE0-17DE-457A-AE3D-B7909A3D6349}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

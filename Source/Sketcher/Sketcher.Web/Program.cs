@@ -1,0 +1,18 @@
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Sketcher.Application;
+using Sketcher.Application.Ports;
+using Sketcher.Infrastructure.Browser;
+using Sketcher.Solver.Relaxation;
+using System.Diagnostics;
+
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
+builder.RootComponents.Add<Sketcher.Web.App>("#app");
+builder.RootComponents.Add<HeadOutlet>("head::after");
+
+builder.Services.AddScoped<ISketchRepository, BrowserSketchRepository>();
+builder.Services.AddScoped<IConstraintSolver, RelaxationSolver>();
+builder.Services.AddScoped<SketchService>();
+
+await builder.Build().RunAsync();

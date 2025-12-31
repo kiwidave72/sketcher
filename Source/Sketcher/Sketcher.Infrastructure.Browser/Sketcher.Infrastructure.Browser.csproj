@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Sketcher.Infrastructure.File</AssemblyName>
+    <AssemblyName>Sketcher.Infrastructure.Browser</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sketcher.Application\Sketcher.Application.csproj" />
     <ProjectReference Include="..\Sketcher.Domain\Sketcher.Domain.csproj" />
+    <PackageReference Include="Microsoft.JSInterop" Version="8.0.0" />
   </ItemGroup>
 </Project>

@@ -22,6 +22,6 @@ public class JsonFileSketchRepository : ISketchRepository
     public SketchModel Load(string path)
     {
         var json = System.IO.File.ReadAllText(path);
-        return JsonSerializer.Deserialize<SketchModel>(json, Options)!;
+        return JsonSerializer.Deserialize<SketchModel>(json, Options) ?? new SketchModel();
     }
 }

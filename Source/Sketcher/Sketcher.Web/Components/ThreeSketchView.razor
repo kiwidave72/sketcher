@@ -1,0 +1,130 @@
+@using System.Linq
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JS
+@inject Sketcher.Application.SketchService Sketch
+@inject Sketcher.Infrastructure.SignalR.SignalRSketchSyncClient Sync
+
+<div id="@ContainerId" style="width: 900px; height: 600px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;"></div>
+
+<div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+  <button @onclick="AddSample">Add sample + solve</button>
+  <button @onclick="Solve">Solve</button>
+  <button @onclick="SaveLocal">Save local</button>
+  <button @onclick="LoadLocal">Load local</button>
+  <button @onclick="ToggleConnect">@(_connected ? "Disconnect" : "Connect")</button>
+  <span>@(_connected ? "Connected" : "Offline")</span>
+</div>
+
+@code {
+  [Parameter] public string ContainerId { get; set; } = "three-host";
+  private IJSObjectReference? _module;
+  private bool _connected;
+  private long _rev = 0;
+  private const string DocId = "default";
+  private const string LocalKey = "sketch-local";
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender) return;
+
+    _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/sketchThree.js");
+    await _module.InvokeVoidAsync("init", ContainerId);
+
+    // offline-first
+    Sketch.Load(LocalKey);
+    await Refresh();
+
+    await TryConnect();
+  }
+
+  private async Task TryConnect()
+  {
+    _connected = await Sync.TryConnectAsync();
+    if (_connected)
+    {
+      Sync.OnSketchUpdate += async update =>
+      {
+        Sketch.LoadFromModel(update.Model);
+        _rev = Math.Max(_rev, update.Revision);
+        await InvokeAsync(Refresh);
+      };
+    }
+    StateHasChanged();
+  }
+
+  private async Task ToggleConnect()
+  {
+    if (_connected)
+    {
+      await Sync.DisposeAsync();
+      _connected = false;
+      StateHasChanged();
+      return;
+    }
+    await TryConnect();
+  }
+
+  private object BuildRenderPayload()
+  {
+    var points = Sketch.Points();
+    var lines = Sketch.Lines();
+    var constraints = Sketch.Constraints();
+
+    return new
+    {
+      points = points.Select(p => new { id = p.Id, x = p.X, y = p.Y }),
+      lines = lines.Select(l => new { id = l.Id, startPointId = l.StartPointId, endPointId = l.EndPointId }),
+      constraints = constraints.Select(c => new { id = c.Id, type = c.Type, label = c.Label, entityIds = c.EntityIds })
+    };
+  }
+
+  private async Task Refresh()
+  {
+    if (_module is null) return;
+    await _module.InvokeVoidAsync("setSketch", BuildRenderPayload());
+  }
+
+  private async Task PublishIfConnected()
+  {
+    Sketch.Save(LocalKey);
+
+    if (!_connected) return;
+
+    _rev++;
+    var update = new Sketcher.Application.Sync.SketchUpdate(
+      DocId, _rev, "web", DateTimeOffset.UtcNow, Sketch.Model);
+
+    await Sync.PublishAsync(update);
+  }
+
+  private async Task Solve()
+  {
+    Sketch.Solve();
+    await PublishIfConnected();
+    await Refresh();
+  }
+
+  private async Task AddSample()
+  {
+    var a = Sketch.AddPoint(0, 0);
+    var b = Sketch.AddPoint(10, 5);
+    var l = Sketch.AddLine(a, b);
+    Sketch.AddHorizontal(l);
+    Sketch.Solve();
+    await PublishIfConnected();
+    await Refresh();
+  }
+
+  private async Task SaveLocal()
+  {
+    Sketch.Save(LocalKey);
+    await Refresh();
+  }
+
+  private async Task LoadLocal()
+  {
+    Sketch.Load(LocalKey);
+    await Refresh();
+  }
+}

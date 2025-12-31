@@ -9,17 +9,32 @@ namespace Sketcher.Domain.Constraints;
 [JsonDerivedType(typeof(Distance), "distance")]
 [JsonDerivedType(typeof(Horizontal), "horizontal")]
 [JsonDerivedType(typeof(Vertical), "vertical")]
+public abstract record Constraint
+{
+    public Guid Id { get; init; }
 
-public abstract record Constraint(Guid Id, IReadOnlyList<Guid> EntityIds);
+    [JsonIgnore]
+    public abstract IReadOnlyList<Guid> EntityIds { get; }
 
-public record Coincident(Guid Id, Guid PointAId, Guid PointBId)
-    : Constraint(Id, new[] { PointAId, PointBId });
+    protected Constraint(Guid id) => Id = id;
+}
 
-public record Distance(Guid Id, Guid PointAId, Guid PointBId, double Value)
-    : Constraint(Id, new[] { PointAId, PointBId });
+public record Coincident(Guid Id, Guid PointAId, Guid PointBId) : Constraint(Id)
+{
+    public override IReadOnlyList<Guid> EntityIds => new[] { PointAId, PointBId };
+}
 
-public record Horizontal(Guid Id, Guid LineId)
-    : Constraint(Id, new[] { LineId });
+public record Distance(Guid Id, Guid PointAId, Guid PointBId, double Value) : Constraint(Id)
+{
+    public override IReadOnlyList<Guid> EntityIds => new[] { PointAId, PointBId };
+}
 
-public record Vertical(Guid Id, Guid LineId)
-    : Constraint(Id, new[] { LineId });
+public record Horizontal(Guid Id, Guid LineId) : Constraint(Id)
+{
+    public override IReadOnlyList<Guid> EntityIds => new[] { LineId };
+}
+
+public record Vertical(Guid Id, Guid LineId) : Constraint(Id)
+{
+    public override IReadOnlyList<Guid> EntityIds => new[] { LineId };
+}

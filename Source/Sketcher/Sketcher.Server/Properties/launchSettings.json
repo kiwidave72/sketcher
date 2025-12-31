@@ -1,12 +1,12 @@
 {
   "profiles": {
-    "Sketcher.Web": {
+    "Sketcher.Server": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:57048;http://localhost:57049"
+      "applicationUrl": "https://localhost:57053;http://localhost:57054"
     }
   }
 }

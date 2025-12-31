@@ -1,8 +1,8 @@
-using Sketcher.Domain.Constraints;
-using Sketcher.Domain.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sketcher.Domain.Constraints;
+using Sketcher.Domain.Geometry;
 
 namespace Sketcher.Domain;
 

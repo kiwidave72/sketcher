@@ -1,12 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <AssemblyName>Sketcher.Cli</AssemblyName>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="xunit" Version="2.7.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sketcher.Application\Sketcher.Application.csproj" />
     <ProjectReference Include="..\Sketcher.Solver.Relaxation\Sketcher.Solver.Relaxation.csproj" />
-    <ProjectReference Include="..\Sketcher.Infrastructure.File\Sketcher.Infrastructure.File.csproj" />
-    <ProjectReference Include="..\Sketcher.Infrastructure.SignalR\Sketcher.Infrastructure.SignalR.csproj" />
   </ItemGroup>
 </Project>

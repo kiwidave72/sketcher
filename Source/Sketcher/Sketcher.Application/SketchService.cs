@@ -1,9 +1,9 @@
 using System;
+using Sketcher.Application.Ports;
 using Sketcher.Domain;
 using Sketcher.Domain.Constraints;
 using Sketcher.Domain.Geometry;
 using Sketcher.Solver.Abstractions;
-using Sketcher.Application.Ports;
 
 namespace Sketcher.Application;
 

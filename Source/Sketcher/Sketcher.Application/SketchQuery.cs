@@ -1,8 +1,6 @@
 using Sketcher.Application.Dto;
 using Sketcher.Domain.Geometry;
 using Sketcher.Application;
-using Sketcher.Application.Dto;
-using Sketcher.Domain.Geometry;
 using System.Collections.Generic;
 using System.Linq;
 

@@ -1,18 +1,21 @@
 # Sketcher
 
-Sketcher is an experimental **parametric sketching kernel** designed to explore how a modern CAD-style sketch system can be built with:
-- clean architecture,
-- multiple front-ends,
-- live synchronization,
-- and a strong separation between geometry, constraints, and UI.
+Sketcher is an experimental **parametric sketching and solid modelling kernel** designed to explore how a modern CAD-style system can be built with:
 
-Sketcher currently focuses on **2D parametric sketching**, but is intentionally structured to grow into:
-- solid modeling,
-- mesh generation,
-- and 3D-print slicing pipelines.
+- clean architecture
+- multiple front-ends
+- live synchronization
+- strong separation between **intent**, **derived geometry**, and **UI**
+
+Sketcher began as a **2D parametric sketch kernel**, but has now grown to include:
+
+- closed-profile detection
+- feature-based solid modelling (extrude)
+- a document / component / sketch / body hierarchy
+- real-time 3D rendering via Three.js
 
 This is **not a UI-first project**.  
-The sketch kernel is the product.
+The **kernel and object model are the product**.
 
 ---
 
@@ -21,9 +24,10 @@ The sketch kernel is the product.
 - **Hexagonal architecture (Ports & Adapters)**
 - **Domain-first design**
 - **Offline-first, online-when-available**
-- **CLI-driven solver development**
+- **CLI-driven solver and feature development**
 - **Web-based visual debugging**
-- **Future-proof for solids and slicing**
+- **Feature-based modelling (history, not meshes)**
+- **Future-proof for real CAD kernels and slicing**
 
 ---
 
@@ -45,166 +49,248 @@ The sketch kernel is the product.
 ┌──────▼────────────────────────────────────┐
 │          Sketcher.Application              │
 │  - SketchService                           │
+│  - Document orchestration                  │
+│  - Feature creation                        │
 │  - Ports (Repository, Solver, Sync)        │
 └──────┬────────────────────────────────────┘
        │
 ┌──────▼────────────────────────────────────┐
 │            Sketcher.Domain                 │
+│  - CadDocument                             │
+│  - Component                               │
+│  - Sketch / SketchModel                   │
+│  - Body / Feature                          │
 │  - Geometry entities                       │
 │  - Constraints                             │
-│  - SketchModel                             │
 └────────────────────────────────────────────┘
 ```
 
 ---
 
-## Projects in the Solution
+## Core Object Model
 
-### Sketcher.Domain
-Pure domain model:
-- `Point2`, `Line2`, `Circle2`, `Rectangle2`
-- Constraints: `Horizontal`, `Vertical`, `Distance`, `Coincident`
-- No UI, no storage, no solver assumptions
+### CadDocument
 
-### Sketcher.Application
-Application layer:
-- `SketchService`
-- Command-style methods (`AddPoint`, `AddLine`, etc.)
-- Query DTOs for rendering
-- Ports:
-  - `ISketchRepository`
-  - `IConstraintSolver`
-  - `ISketchSyncClient`
+The root of the model. A document contains:
 
-### Sketcher.Solver.Relaxation
-Reference constraint solver:
-- Iterative relaxation approach
-- Deterministic behavior
-- Used by CLI, Web, and Server
+- Components (assembly hierarchy)
+- Sketches
+- Bodies
+- Active sketch reference
 
-### Sketcher.Infrastructure.*
-Adapters:
-- **File**: JSON persistence for CLI
-- **Browser**: `localStorage` persistence for WASM
-- **SignalR**: WebSocket sync adapter
+The entire modelling state is serialised as a single document.
 
-### Sketcher.Server
-ASP.NET Core server:
-- SignalR hub (`/sketchHub`)
-- In-memory sketch store
-- Broadcasts full sketch state
-- Optional REST endpoints
+---
 
-### Sketcher.Web
-Blazor WebAssembly frontend:
-- Three.js renderer
-- Offline-first
-- Connects to server when available
-- Visual debugging of solver behavior
-- Toolbar-based interaction (in progress)
+### Component
 
-### Sketcher.Cli
-Command-line interface:
-- Fast iteration on geometry and constraints
-- Scriptable
-- Optional live sync with server
+Represents an assembly node.
+
+A component may own:
+
+- child components
+- sketches
+- bodies
+
+This enables future support for assemblies and instancing.
+
+---
+
+### Sketch
+
+A sketch represents **2D parametric intent**.
+
+- Belongs to a component
+- Owns a `SketchModel`
+- Currently lives in the XY plane (extensible later)
+
+---
+
+### SketchModel
+
+Pure sketch data:
+
+- Geometry entities:
+  - `Point2`
+  - `Line2`
+  - `Circle2`
+  - `Rectangle2`
+- Constraints:
+  - Horizontal
+  - Vertical
+  - Distance
+  - Coincident
+
+The sketch model has **no rendering or solver dependencies**.
+
+---
+
+### Body
+
+A body represents a **solid**.
+
+Important:
+- A body does **not** store geometry
+- A body stores **features**
+- Geometry is **derived** by replaying features
+
+This mirrors real parametric CAD systems.
+
+---
+
+### Feature System
+
+Features capture **modelling intent**.
+
+Currently implemented:
+
+#### ExtrudeFeature
+
+- References a sketch
+- References selected sketch edges
+- Stores extrusion height
+- Rebuilds geometry on demand
+
+Future features (planned):
+- Cut extrude
+- Revolve
+- Fillet / chamfer
+- Boolean operations
+
+---
+
+## Feature-Based Modelling Workflow
+
+1. Create sketch geometry (points / lines)
+2. Form a closed loop
+3. Create an `ExtrudeFeature`
+4. Renderer reconstructs loops and generates a solid
+
+Meshes are **never authoritative** — they are a view.
+
+---
+
+## Web Renderer (Three.js)
+
+The web frontend uses **Three.js** as a temporary geometry kernel.
+
+### Rendering behaviour
+
+- Sketch geometry:
+  - points rendered as small spheres
+  - lines rendered as line segments
+- Bodies:
+  - purple solid mesh
+  - black wireframe outline (edge overlay)
+
+### Important properties
+
+- Geometry is regenerated every update
+- Rendering is stateless
+- No meshes are persisted in the document
+
+This allows a future swap to a real CAD kernel (OpenCascade / CGAL / WASM).
+
+---
+
+## CLI
+
+The CLI is a REPL-style interface that drives the same model as the Web UI.
+
+### Geometry Commands
+
+```text
+point <x> <y>
+line <pointId1> <pointId2>
+rectangle <width> <height>
+```
+
+`rectangle`:
+- creates 4 points
+- creates 4 lines
+- forms a closed outer path
+
+### Extrude
+
+```text
+extrude <height> <lineId1> <lineId2> <lineId3> <lineId4>
+```
+
+Creates:
+- a new body
+- an `ExtrudeFeature` referencing the sketch
+
+### Document Commands
+
+```text
+dump
+save <file.json>
+load <file.json>
+reset
+```
+
+- `reset` clears the document to a blank state
+- `dump` prints the full document hierarchy
 
 ---
 
 ## Offline-first + Live Sync
 
-Sketcher is designed so that **everything works offline**.
+Sketcher works **fully offline**.
 
-When the server is available:
+When online:
 - CLI and Web connect via SignalR
-- All changes are published as `SketchUpdate`
-- Server broadcasts updates to all clients
+- All changes are broadcast as full document updates
 
 When offline:
 - CLI uses local JSON files
-- Web uses browser `localStorage`
-- No functionality is lost
+- Web uses browser localStorage
 
----
-
-## Typical Development Workflow
-
-### Start the server
-```bash
-dotnet run --project Sketcher.Server
-```
-
-### Start the web frontend
-```bash
-dotnet run --project Sketcher.Web
-```
-
-### Start the CLI (connected)
-```bash
-dotnet run --project Sketcher.Cli -- --hub http://localhost:<port>/sketchHub
-```
-
-Changes made in the CLI appear instantly in the Web view and vice versa.
+No functionality is lost.
 
 ---
 
 ## Why both CLI and Web?
 
-- **CLI** is the fastest way to:
-  - add constraints
-  - test solver behavior
-  - reproduce edge cases
-- **Web** provides:
+- **CLI**
+  - fastest way to develop constraints and features
+  - scriptable and deterministic
+- **Web**
   - immediate visual feedback
-  - intuitive understanding of constraint interactions
-  - a future interactive editor
+  - 3D inspection of results
+  - interactive debugging
 
-Together they form a **solver development loop**.
-
----
-
-## UI Direction (Web)
-
-The Web UI is evolving toward a toolbar-driven sketch workflow:
-- Select
-- Add Point
-- Add Line
-- Solve
-- Save / Load
-- Connect / Disconnect
-
-The canvas is intentionally dumb:
-- it renders geometry,
-- emits click/selection events,
-- and never owns domain logic.
+Together they form a **modelling development loop**.
 
 ---
 
 ## Roadmap
 
 Short-term:
-- Point selection and dragging
-- Constraint glyphs (H/V/D)
-- Fix/anchor constraints
-- Server-side solving
+- Sketch selection and dragging
+- Sketch region highlighting
+- Cut extrude
+- Feature editing / regeneration
 
 Mid-term:
-- Closed profiles
-- Sketch regions
-- Extrusion to solids
+- Revolve feature
+- Face selection
+- Visibility toggles
+- Export (STL)
 
 Long-term:
+- Real CAD kernel backend
 - Mesh generation
 - Slicing
 - Toolpath generation
 
 ---
 
-## Status
+## Design Philosophy
 
-**Active development**
+> **Meshes are views, not truth.**
 
-Architecture is stable.  
-Features are being layered carefully to preserve correctness and flexibility.
+The document stores **intent**.  
+Geometry is **derived**, replaceable, and never authoritative.
 
-This repository favors **clarity and correctness over shortcuts**.
+Sketcher favors **clarity, correctness, and architecture** over shortcuts.

@@ -2,7 +2,7 @@
   "profiles": {
     "Sketcher.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "--hub http://localhost:57054/sketchHub"
+      "commandLineArgs": "--hub https://localhost:57053/sketchHub"
     }
   }
 }

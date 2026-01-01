@@ -12,6 +12,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        Thread.Sleep(5000);
         var svc = new SketchService(new JsonFileSketchRepository(), new RelaxationSolver());
         var docId = "default";
         long rev = 0;
@@ -28,14 +29,14 @@ class Program
             {
                 sync.OnSketchUpdate += update =>
                 {
-                    svc.LoadFromModel(update.Model);
+                    svc.LoadFromDocument(update.Document);
                     rev = Math.Max(rev, update.Revision);
                     Console.WriteLine($"[hub] updated to rev {rev}");
                 };
             }
         }
 
-        Console.WriteLine("Sketcher CLI. Commands: point x y | line <pA> <pB> | horizontal <line> | solve | dump | save f.json | load f.json | exit");
+        Console.WriteLine("Sketcher CLI. Commands: point x y | line <startPointId> <endPointId> | rectangle [width height] | horizontal <lineId> | vertical <lineId> | coincident <pointIdA> <pointIdB> | distance <pointIdA> <pointIdB> <d> | solve | extrude <height> <lineId...> | reset | dump | save <file.json> | load <file.json> | exit");
         while (true)
         {
             Console.Write("> ");
@@ -69,16 +70,16 @@ class Program
                         rev = await Publish(sync, svc, docId, rev);
 
                         break;
-                    case "coincident":
-                        Console.WriteLine(svc.AddCoincident(Guid.Parse(p[1]), Guid.Parse(p[2])));
-                        rev = await Publish(sync, svc, docId, rev);
+                    //case "coincident":
+                    //    Console.WriteLine(svc.AddCoincident(Guid.Parse(p[1]), Guid.Parse(p[2])));
+                    //    rev = await Publish(sync, svc, docId, rev);
 
-                        break;
-                    case "distance":
-                        Console.WriteLine(svc.AddDistance(Guid.Parse(p[1]), Guid.Parse(p[2]), double.Parse(p[3])));
-                        rev = await Publish(sync, svc, docId, rev);
+                    //    break;
+                    //case "distance":
+                    //    Console.WriteLine(svc.AddDistance(Guid.Parse(p[1]), Guid.Parse(p[2]), double.Parse(p[3])));
+                    //    rev = await Publish(sync, svc, docId, rev);
 
-                        break;
+                    //    break;
                     case "solve":
                         {
                             var r = svc.Solve();
@@ -88,8 +89,61 @@ class Program
 
                             break;
                         }
-                    case "save":
-                        svc.Save(p[1]); Console.WriteLine("Saved."); break;
+                    
+                    
+
+case "rectangle":
+    // rectangle [width height]
+    double w, h;
+    if (p.Length >= 3)
+    {
+        w = double.Parse(p[1]);
+        h = double.Parse(p[2]);
+    }
+    else
+    {
+        Console.Write("Width: ");
+        w = double.Parse(Console.ReadLine() ?? "0");
+        Console.Write("Height: ");
+        h = double.Parse(Console.ReadLine() ?? "0");
+    }
+
+    // anchored at origin
+    var rp1 = svc.AddPoint(0, 0);
+    var rp2 = svc.AddPoint(w, 0);
+    var rp3 = svc.AddPoint(w, h);
+    var rp4 = svc.AddPoint(0, h);
+
+    var rl1 = svc.AddLine(rp1, rp2);
+    var rl2 = svc.AddLine(rp2, rp3);
+    var rl3 = svc.AddLine(rp3, rp4);
+    var rl4 = svc.AddLine(rp4, rp1);
+
+    Console.WriteLine("Rectangle created:");
+    Console.WriteLine($"  Points: {rp1}, {rp2}, {rp3}, {rp4}");
+    Console.WriteLine($"  Lines:  {rl1}, {rl2}, {rl3}, {rl4}");
+
+    rev = await Publish(sync, svc, docId, rev);
+    break;
+
+case "reset":
+    // reset document to a blank default document
+    svc.ResetDocument();
+    Console.WriteLine("Document reset to blank.");
+    rev = await Publish(sync, svc, docId, rev);
+    break;
+
+case "extrude":
+                        // extrude <height> <lineId1> <lineId2> ...
+                        if (p.Length < 3) { Console.WriteLine("Usage: extrude <height> <lineId1> <lineId2> ..."); break; }
+                        var height = double.Parse(p[1]);
+                        var lineIds = p.Skip(2).Select(Guid.Parse).ToArray();
+                        var bodyId = svc.ExtrudeFromActiveSketch(lineIds, height);
+                        Console.WriteLine($"Extruded Body {bodyId} (height={height})");
+                        rev = await Publish(sync, svc, docId, rev);
+                        break;
+case "save":
+                        svc.Save(p[1]); Console.WriteLine($"Saved to {p[1]}."); break;
                     case "load":
                         svc.Load(p[1]); Console.WriteLine($"Loaded. Entities={svc.Model.Entities.Count} Constraints={svc.Model.Constraints.Count}");
                         rev = await Publish(sync, svc, docId, rev);
@@ -114,7 +168,21 @@ class Program
 
     static void Dump(SketchService svc)
     {
+        var doc = svc.Document;
+        Console.WriteLine($"Document: {doc.Name} Id={doc.Id}");
+        Console.WriteLine($"Components={doc.Components.Count} Sketches={doc.Sketches.Count} Bodies={doc.Bodies.Count}");
+        Console.WriteLine($"RootComponentId={doc.RootComponentId} ActiveSketchId={doc.ActiveSketchId}");
+
+        if (doc.Components.TryGetValue(doc.RootComponentId, out var root))
+        {
+            Console.WriteLine($"Root Component: {root.Name} Id={root.Id}");
+            Console.WriteLine($"  ChildComponents={root.ChildComponentIds.Count} Sketches={root.SketchIds.Count} Bodies={root.BodyIds.Count}");
+        }
+
+        // Active sketch details
+        Console.WriteLine("=== Active Sketch ===");
         Console.WriteLine($"Entities={svc.Model.Entities.Count} Constraints={svc.Model.Constraints.Count}");
+
         foreach (var e in svc.Model.Entities.Values)
         {
             switch (e)
@@ -130,11 +198,30 @@ class Program
                     break;
             }
         }
+
         foreach (var c in svc.Model.Constraints.Values)
-            Console.WriteLine($"  {c.GetType().Name} {c.Id}");
+            Console.WriteLine($"  Constraint {c.Type} {c.Id} ({c.Label}) entities=[{string.Join(", ", c.EntityIds)}]");
+
+        Console.WriteLine("=== Bodies ===");
+        foreach (var body in doc.Bodies.Values)
+        {
+            Console.WriteLine($"  Body {body.Id} name='{body.Name}' component={body.ComponentId} features={body.Features.Count}");
+            foreach (var f in body.Features)
+            {
+                switch (f)
+                {
+                    case Sketcher.Domain.Model.ExtrudeFeature ex:
+                        Console.WriteLine($"    Extrude {ex.Id} sketch={ex.SketchId} height={ex.Height} edges={ex.SelectedEdgeIds.Count}");
+                        break;
+                    default:
+                        Console.WriteLine($"    {f.GetType().Name} {f.Id}");
+                        break;
+                }
+            }
+        }
     }
 
-    static async Task<long> Publish(
+static async Task<long> Publish(
       SignalRSketchSyncClient? sync,
       SketchService svc,
       string docId,
@@ -150,7 +237,7 @@ class Program
             nextRev,
             "cli",
             DateTimeOffset.UtcNow,
-            svc.Model);
+            svc.Document);
 
         await sync.PublishAsync(update);
         return nextRev;

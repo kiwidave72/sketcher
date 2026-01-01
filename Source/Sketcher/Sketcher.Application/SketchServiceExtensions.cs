@@ -1,14 +1,10 @@
-using System.Reflection;
-using Sketcher.Domain;
+using Sketcher.Domain.Model;
 
 namespace Sketcher.Application;
 
 public static class SketchServiceExtensions
 {
-    // Used by sync adapters to replace the current model atomically.
-    public static void LoadFromModel(this SketchService svc, SketchModel model)
-    {
-        var prop = typeof(SketchService).GetProperty("Model", BindingFlags.Instance | BindingFlags.Public);
-        prop!.SetValue(svc, model);
-    }
+    // Used by sync adapters to replace the current document atomically.
+    public static void LoadFromDocument(this SketchService svc, CadDocument document)
+        => svc.LoadFromDocument(document);
 }

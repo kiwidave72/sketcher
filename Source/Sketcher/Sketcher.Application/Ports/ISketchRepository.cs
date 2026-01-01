@@ -1,9 +1,9 @@
-using Sketcher.Domain;
+using Sketcher.Domain.Model;
 
 namespace Sketcher.Application.Ports;
 
 public interface ISketchRepository
 {
-    void Save(string keyOrPath, SketchModel sketch);
-    SketchModel Load(string keyOrPath);
+    void Save(string keyOrPath, CadDocument document);
+    CadDocument Load(string keyOrPath);
 }

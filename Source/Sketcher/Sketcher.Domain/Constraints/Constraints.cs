@@ -16,6 +16,12 @@ public abstract record Constraint
     [JsonIgnore]
     public abstract IReadOnlyList<Guid> EntityIds { get; }
 
+    [JsonIgnore]
+    public virtual string Type => GetType().Name;
+
+    [JsonIgnore]
+    public virtual string Label => Type;
+
     protected Constraint(Guid id) => Id = id;
 }
 

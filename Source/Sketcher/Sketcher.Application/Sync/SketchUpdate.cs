@@ -1,5 +1,5 @@
 using System;
-using Sketcher.Domain;
+using Sketcher.Domain.Model;
 
 namespace Sketcher.Application.Sync;
 
@@ -8,5 +8,5 @@ public record SketchUpdate(
     long Revision,
     string SourceClientId,
     DateTimeOffset TimestampUtc,
-    SketchModel Model
+    CadDocument Document
 );

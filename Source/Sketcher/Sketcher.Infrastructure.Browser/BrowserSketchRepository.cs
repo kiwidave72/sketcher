@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
 using Sketcher.Application.Ports;
-using Sketcher.Domain;
+using Sketcher.Domain.Model;
 
 namespace Sketcher.Infrastructure.Browser;
 
@@ -21,18 +21,18 @@ public class BrowserSketchRepository : ISketchRepository
                   "BrowserSketchRepository requires IJSInProcessRuntime (Blazor WebAssembly).");
     }
 
-    public void Save(string key, SketchModel sketch)
+    public void Save(string key, CadDocument document)
     {
-        var json = JsonSerializer.Serialize(sketch, Options);
+        var json = JsonSerializer.Serialize(document, Options);
         _js.InvokeVoid("localStorage.setItem", key, json);
     }
 
-    public SketchModel Load(string key)
+    public CadDocument Load(string key)
     {
         var json = _js.Invoke<string?>("localStorage.getItem", key);
         if (string.IsNullOrWhiteSpace(json))
-            return new SketchModel();
+            return CadDocument.CreateDefault();
 
-        return JsonSerializer.Deserialize<SketchModel>(json, Options) ?? new SketchModel();
+        return JsonSerializer.Deserialize<CadDocument>(json, Options) ?? CadDocument.CreateDefault();
     }
 }

@@ -1,3 +1,4 @@
+@using System
 @using System.Linq
 @using Microsoft.JSInterop
 
@@ -46,7 +47,7 @@
     {
       Sync.OnSketchUpdate += async update =>
       {
-        Sketch.LoadFromModel(update.Model);
+        Sketch.LoadFromDocument(update.Document);
         _rev = Math.Max(_rev, update.Revision);
         await InvokeAsync(Refresh);
       };
@@ -67,18 +68,55 @@
     }
 
   private object BuildRenderPayload()
-  {
-    var points = Sketch.Points();
-    var lines = Sketch.Lines();
-    var constraints = Sketch.Constraints();
+{
+  var points = Sketch.Points();
+  var lines = Sketch.Lines();
+  var constraints = Sketch.Constraints();
 
-    return new
+  var doc = Sketch.Document;
+
+  var bodies = doc.Bodies.Values.Select(b => new
+  {
+    id = b.Id,
+    name = b.Name,
+    componentId = b.ComponentId,
+    features = b.Features.Select(f =>
     {
-      points = points.Select(p => new { id = p.Id, x = p.X, y = p.Y }),
-      lines = lines.Select(l => new { id = l.Id, startPointId = l.StartPointId, endPointId = l.EndPointId }),
-      constraints = constraints.Select(c => new { id = c.Id, type = c.Type, label = c.Label, entityIds = c.EntityIds })
-    };
-  }
+      if (f is Sketcher.Domain.Model.ExtrudeFeature ex)
+      {
+        return new
+        {
+          type = "extrude",
+          id = f.Id,
+          name = f.Name,
+          sketchId = (Guid?)ex.SketchId,
+          edgeIds = (System.Collections.Generic.IEnumerable<Guid>)ex.SelectedEdgeIds,
+          height = (double?)ex.Height
+        };
+      }
+
+      return new
+      {
+        type = "unknown",
+        id = f.Id,
+        name = f.Name,
+        sketchId = (Guid?)null,
+        edgeIds = (System.Collections.Generic.IEnumerable<Guid>)Array.Empty<Guid>(),
+        height = (double?)null
+      };
+    }).ToArray()
+  }).ToArray();
+
+  return new
+  {
+    points = points.Select(p => new { id = p.Id, x = p.X, y = p.Y }),
+    lines = lines.Select(l => new { id = l.Id, startPointId = l.StartPointId, endPointId = l.EndPointId }),
+    activeSketchId = Sketch.ActiveSketchId,
+    constraints = constraints.Select(c => new { id = c.Id, type = c.Type, label = c.Label, entityIds = c.EntityIds }),
+    bodies = bodies
+  };
+}
+
 
   private async Task Refresh()
   {
@@ -94,7 +132,7 @@
 
     _rev++;
     var update = new Sketcher.Application.Sync.SketchUpdate(
-      DocId, _rev, "web", DateTimeOffset.UtcNow, Sketch.Model);
+      DocId, _rev, "web", DateTimeOffset.UtcNow, Sketch.Document);
 
     await Sync.PublishAsync(update);
   }

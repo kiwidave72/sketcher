@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
 using Sketcher.Application.Ports;
-using Sketcher.Domain;
+using Sketcher.Domain.Model;
 
 namespace Sketcher.Infrastructure.Browser;
 
@@ -15,7 +15,7 @@ public class BrowserSketchRepository : ISketchRepository
 
     private async Task SaveAsync(string key, SketchModel sketch)
     {
-        var json = JsonSerializer.Serialize(sketch);
+        var json = JsonSerializer.Serialize(document);
         await _js.InvokeVoidAsync("localStorage.setItem", key, json);
     }
 
@@ -23,7 +23,7 @@ public class BrowserSketchRepository : ISketchRepository
     {
         var json = await _js.InvokeAsync<string?>("localStorage.getItem", key);
         if (string.IsNullOrWhiteSpace(json))
-            return new SketchModel();
-        return JsonSerializer.Deserialize<SketchModel>(json)!;
+            return CadDocument.CreateDefault();
+        return JsonSerializer.Deserialize<CadDocument>(json)!;
     }
 }

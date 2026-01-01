@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using Sketcher.Application.Ports;
-using Sketcher.Domain;
+using Sketcher.Domain.Model;
 
 namespace Sketcher.Infrastructure.File;
 
@@ -13,15 +13,15 @@ public class JsonFileSketchRepository : ISketchRepository
         PropertyNameCaseInsensitive = true
     };
 
-    public void Save(string path, SketchModel sketch)
+    public void Save(string path, CadDocument document)
     {
-        var json = JsonSerializer.Serialize(sketch, Options);
+        var json = JsonSerializer.Serialize(document, Options);
         System.IO.File.WriteAllText(path, json);
     }
 
-    public SketchModel Load(string path)
+    public CadDocument Load(string path)
     {
         var json = System.IO.File.ReadAllText(path);
-        return JsonSerializer.Deserialize<SketchModel>(json, Options) ?? new SketchModel();
+        return JsonSerializer.Deserialize<CadDocument>(json, Options) ?? CadDocument.CreateDefault();
     }
 }

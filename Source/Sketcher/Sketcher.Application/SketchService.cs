@@ -132,7 +132,28 @@ private Sketch EnsureDefaultSketch()
         return r.Id;
     }
 
-    public void RemoveEntity(Guid id) => ActiveSketch.Model.RemoveEntity(id);
+    
+
+    /// <summary>
+    /// Moves a set of points in the active sketch by an (dx, dy) offset.
+    /// This is a direct edit; constraints can be re-solved afterwards.
+    /// </summary>
+    public void MovePoints(IEnumerable<Guid> pointIds, double dx, double dy)
+    {
+        var ids = pointIds?.ToList() ?? new List<Guid>();
+        if (ids.Count == 0) throw new ArgumentException("No point ids supplied.", nameof(pointIds));
+
+        foreach (var id in ids)
+        {
+            if (!ActiveSketch.Model.Entities.TryGetValue(id, out var e) || e is not Point2 p)
+                throw new InvalidOperationException($"Point not found: {id}");
+
+            // Point2 uses init-only properties, so treat it as immutable and replace the instance.
+            var moved = new Point2(p.Id, p.X + dx, p.Y + dy);
+            ActiveSketch.Model.UpsertEntity(moved);
+        }
+    }
+public void RemoveEntity(Guid id) => ActiveSketch.Model.RemoveEntity(id);
 
     public Guid AddHorizontal(Guid lineId)
     {
@@ -144,6 +165,20 @@ private Sketch EnsureDefaultSketch()
     public Guid AddVertical(Guid lineId)
     {
         var c = new Vertical(Guid.NewGuid(), lineId);
+        ActiveSketch.Model.AddConstraint(c);
+        return c.Id;
+    }
+
+    public Guid AddCoincident(Guid pointAId, Guid pointBId)
+    {
+        var c = new Coincident(Guid.NewGuid(), pointAId, pointBId);
+        ActiveSketch.Model.AddConstraint(c);
+        return c.Id;
+    }
+
+    public Guid AddDistance(Guid pointAId, Guid pointBId, double value)
+    {
+        var c = new Distance(Guid.NewGuid(), pointAId, pointBId, value);
         ActiveSketch.Model.AddConstraint(c);
         return c.Id;
     }
@@ -170,7 +205,7 @@ private Sketch EnsureDefaultSketch()
         return body.Id;
     }
 
-    public Guid AddExtrudeFeature(Guid bodyId, Guid sketchId, IEnumerable<Guid> selectedEdgeIds, double height)
+    public Guid AddExtrudeFeature(Guid bodyId, Guid sketchId, IEnumerable<Guid> selectedEdgeIds, double height, ExtrudeOperation operation = ExtrudeOperation.Join)
     {
         if (!Document.Bodies.TryGetValue(bodyId, out var body))
             throw new InvalidOperationException("Body not found.");
@@ -183,7 +218,8 @@ private Sketch EnsureDefaultSketch()
             Name = "Extrude",
             SketchId = sketchId,
             SelectedEdgeIds = selectedEdgeIds.ToList(),
-            Height = height
+            Height = height,
+            Operation = operation
         };
 
         body.Features.Add(feat);
@@ -197,7 +233,7 @@ private Sketch EnsureDefaultSketch()
     {
         var sketch = ActiveSketch;
         var bodyId = CreateBody(sketch.ComponentId, "Extrude Body");
-        AddExtrudeFeature(bodyId, sketch.Id, selectedLineIds, height);
+        AddExtrudeFeature(bodyId, sketch.Id, selectedLineIds, height, ExtrudeOperation.Join);
         return bodyId;
     }
 

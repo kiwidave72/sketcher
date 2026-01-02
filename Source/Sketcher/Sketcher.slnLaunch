@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "Sketcher (Server+Web+Cli)",
+    "Projects": [
+      {
+        "Path": "Sketcher.Server\\Sketcher.Server.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Sketcher.Web\\Sketcher.Web.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Sketcher.Cli\\Sketcher.Cli.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

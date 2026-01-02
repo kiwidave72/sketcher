@@ -80,6 +80,7 @@
     id = b.Id,
     name = b.Name,
     componentId = b.ComponentId,
+    mesh = b.Mesh is null ? null : new { positions = b.Mesh.Positions, indices = b.Mesh.Indices },
     features = b.Features.Select(f =>
     {
       if (f is Sketcher.Domain.Model.ExtrudeFeature ex)
@@ -91,7 +92,8 @@
           name = f.Name,
           sketchId = (Guid?)ex.SketchId,
           edgeIds = (System.Collections.Generic.IEnumerable<Guid>)ex.SelectedEdgeIds,
-          height = (double?)ex.Height
+          height = (double?)ex.Height,
+          operation = ex.Operation.ToString().ToLowerInvariant()
         };
       }
 
@@ -102,7 +104,8 @@
         name = f.Name,
         sketchId = (Guid?)null,
         edgeIds = (System.Collections.Generic.IEnumerable<Guid>)Array.Empty<Guid>(),
-        height = (double?)null
+        height = (double?)null,
+        operation = (string?)null
       };
     }).ToArray()
   }).ToArray();

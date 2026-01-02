@@ -137,6 +137,38 @@ function renderSolids(bodies, lines, byPointId, activeSketchId) {
     for (const l of lines) lineById[l.id] = l;
 
     for (const body of bodies) {
+        // Phase 2 (server-built) meshes take priority when present.
+        if (body.mesh && body.mesh.positions && body.mesh.indices) {
+            const pos = new Float32Array(body.mesh.positions);
+            const idx = new Uint32Array(body.mesh.indices);
+
+            const geom = new THREE.BufferGeometry();
+            geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geom.setIndex(new THREE.BufferAttribute(idx, 1));
+            geom.computeVertexNormals();
+
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x8000ff,
+                metalness: 0.05,
+                roughness: 0.6,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+
+            const bodyMesh = new THREE.Mesh(geom, bodyMat);
+            bodyMesh.userData = { kind: "body", id: body.id };
+
+            const edges = new THREE.EdgesGeometry(geom, 1);
+            const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+            wire.renderOrder = 999;
+            wire.material.depthTest = true;
+            bodyMesh.add(wire);
+
+            solidsGroup.add(bodyMesh);
+            continue;
+        }
+
         if (!body.features) continue;
         for (const feat of body.features) {
             if (feat.type !== "extrude") continue;
